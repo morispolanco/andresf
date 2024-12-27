@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 from PyPDF2 import PdfReader
-import io
+import os
 
 # Configuración de la página
 st.set_page_config(
@@ -17,61 +17,43 @@ st.title("🤖 Chatbot sobre 'Médicos de la locura'")
 # Explicación breve
 st.markdown("""
     Este chatbot te permite hacer preguntas sobre el libro **'Médicos de la locura'**.
-    Sube el libro en formato PDF o TXT, y comienza a interactuar.
+    El contenido del libro está pre-cargado para que puedas interactuar directamente.
 """)
 
+# Ruta al archivo PDF pre-cargado
+PDF_PATH = os.path.join("data", "medicos_de_la_locura.pdf")
+
 # Función para extraer texto de un archivo PDF
-def extract_text_from_pdf(file):
+def extract_text_from_pdf(file_path):
     try:
-        reader = PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() + "\n"
+        with open(file_path, "rb") as file:
+            reader = PdfReader(file)
+            text = ""
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
         return text
     except Exception as e:
         st.error(f"Error al leer el archivo PDF: {e}")
         return None
 
-# Función para extraer texto de un archivo TXT
-def extract_text_from_txt(file):
-    try:
-        stringio = io.StringIO(file.getvalue().decode("utf-8"))
-        text = stringio.read()
-        return text
-    except Exception as e:
-        st.error(f"Error al leer el archivo TXT: {e}")
-        return None
+# Extraer el contenido del libro
+st.info("Procesando el libro. Por favor, espera...")
+book_content = extract_text_from_pdf(PDF_PATH)
 
-# Subida del archivo del libro
-uploaded_file = st.file_uploader(
-    "Sube el libro 'Médicos de la locura' en formato PDF o TXT",
-    type=["pdf", "txt"]
-)
-
-book_content = ""
-
-if uploaded_file is not None:
-    st.success("Archivo cargado con éxito.")
-    if uploaded_file.type == "application/pdf":
-        book_content = extract_text_from_pdf(uploaded_file)
-    elif uploaded_file.type == "text/plain":
-        book_content = extract_text_from_txt(uploaded_file)
-    else:
-        st.error("Formato de archivo no soportado. Por favor, sube un PDF o TXT.")
-
-    if book_content:
-        st.info("El libro ha sido procesado y está listo para responder tus preguntas.")
+if book_content:
+    st.success("El libro ha sido procesado y está listo para responder tus preguntas.")
 else:
-    st.warning("Por favor, sube el libro para comenzar.")
+    st.error("No se pudo procesar el libro. Asegúrate de que el archivo PDF esté en la ubicación correcta.")
+    st.stop()  # Detiene la ejecución si no se pudo cargar el libro
 
 # Entrada para la pregunta del usuario
 user_question = st.text_input("Escribe tu pregunta sobre el libro:")
 
 # Botón para enviar la pregunta
 if st.button("Enviar"):
-    if not uploaded_file:
-        st.error("Por favor, sube el libro antes de hacer una pregunta.")
-    elif not user_question.strip():
+    if not user_question.strip():
         st.error("Por favor, escribe una pregunta válida.")
     else:
         with st.spinner("Procesando tu pregunta..."):
