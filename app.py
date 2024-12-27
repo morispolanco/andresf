@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 from PyPDF2 import PdfReader
+import time
 
 # Configuración de la página con diseño predeterminado (estrecho)
 st.set_page_config(
@@ -48,6 +49,23 @@ def extract_text_from_pdf(file_path):
     except Exception as e:
         st.error(f"Error al leer el archivo PDF: {e}")
         return None
+
+# Función para realizar solicitudes con reintentos en caso de error 429
+def make_api_request(url, headers, data, max_retries=5, backoff_factor=1):
+    for attempt in range(max_retries):
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            return response
+        elif response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", backoff_factor))
+            st.warning(f"Demasiadas solicitudes. Reintentando en {retry_after} segundos...")
+            time.sleep(retry_after)
+            backoff_factor *= 2  # Incrementa el tiempo de espera exponencialmente
+        else:
+            st.error(f"Error en la API: {response.status_code} - {response.text}")
+            return None
+    st.error("Se alcanzó el número máximo de reintentos.")
+    return None
 
 # Extraer el contenido del libro
 st.info("Procesando el libro. Por favor, espera...")
@@ -101,18 +119,19 @@ if st.button("Enviar 🚀"):
                     "Authorization": f"Bearer {api_key}"
                 }
 
-                # Realizar la solicitud POST a la API
-                response = requests.post(api_url, headers=headers, data=json.dumps(data))
+                # Realizar la solicitud POST a la API con reintentos
+                response = make_api_request(api_url, headers, data)
 
                 # Verificar el estado de la respuesta
-                if response.status_code == 200:
+                if response and response.status_code == 200:
                     response_data = response.json()
                     # Extraer la respuesta del asistente
                     assistant_reply = response_data.get("choices")[0].get("message").get("content")
                     st.success("💬 Respuesta del chatbot:")
                     st.write(assistant_reply)
-                else:
-                    st.error(f"⚠️ Error en la API: {response.status_code} - {response.text}")
+                elif response:
+                    # Ya se manejaron los errores dentro de make_api_request
+                    pass
 
             except Exception as e:
                 st.error(f"❌ Ocurrió un error: {e}")
