@@ -2,13 +2,12 @@ import streamlit as st
 import requests
 import json
 from PyPDF2 import PdfReader
-import os
 
 # Configuración de la página
 st.set_page_config(
     page_title="Chatbot - Médicos de la locura",
     page_icon="🩺",
-    layout="wide",
+    layout="centered",  # Utiliza el diseño predeterminado (centrado)
 )
 
 # Título de la aplicación
