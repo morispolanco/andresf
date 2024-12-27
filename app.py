@@ -20,8 +20,8 @@ st.markdown("""
     El contenido del libro está pre-cargado para que puedas interactuar directamente.
 """)
 
-# Ruta al archivo PDF pre-cargado
-PDF_PATH = os.path.join("data", "medicos_de_la_locura.pdf")
+# Ruta al archivo PDF pre-cargado en la raíz del proyecto
+PDF_PATH = "medicos_de_la_locura.pdf"
 
 # Función para extraer texto de un archivo PDF
 def extract_text_from_pdf(file_path):
@@ -34,6 +34,9 @@ def extract_text_from_pdf(file_path):
                 if page_text:
                     text += page_text + "\n"
         return text
+    except FileNotFoundError:
+        st.error(f"No se encontró el archivo PDF en la ruta especificada: {file_path}")
+        return None
     except Exception as e:
         st.error(f"Error al leer el archivo PDF: {e}")
         return None
